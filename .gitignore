@@ -24,3 +24,13 @@ proguard/
 
 # Log Files
 *.log
+
+#IntelliJ 
+.idea
+
+#OS X
+.DS_Store
+
+# Windows thumbnail db
+Thumbs.db
+

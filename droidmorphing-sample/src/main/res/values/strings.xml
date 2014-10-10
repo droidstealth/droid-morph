@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <string name="app_name">AppMorphingSample</string>
+    <string name="hello_world">Hello world!</string>
+    <string name="action_settings">Settings</string>
+    <string name="select_icon">Select an icon</string>
+    <string name="select_icon_button">Select Icon</string>
+    <string name="select_label">Enter a name</string>
+    <string name="explanation">This application is a demonstration of the App morphing library. To use it, simply select a new icon, enter a new app name, and press morph. After construction of the new application has been completed, the link can be shared to other devices as an application in its new form.</string>
+    <string name="morph">Morph!</string>
+    <string name="non_ascii_error">Name must not contain non-ascii characters!</string>
+    <string name="failed_app_morph">Failed to morph app</string>
+    <string name="share">Share</string>
+
+</resources>
