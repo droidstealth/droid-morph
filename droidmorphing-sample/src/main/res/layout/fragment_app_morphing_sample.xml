@@ -23,6 +23,7 @@
         android:paddingTop="@dimen/text_button_padding"
         android:paddingBottom="@dimen/text_button_padding"
         android:paddingRight="@dimen/small_padding"
+        android:paddingEnd="@dimen/small_padding"
         android:text="@string/select_icon"/>
     
     <Button
@@ -71,6 +72,16 @@
         android:text="@string/non_ascii_error"
         android:visibility="gone"
         android:textColor="@color/red"/>
+
+    <ProgressBar
+        android:id="@+id/progress"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_below="@id/morph_button"
+        android:layout_marginTop="@dimen/small_padding"
+        style="@style/ProgressBar"
+        android:indeterminate="false"
+        android:visibility="gone"/>
 
     <RelativeLayout
         android:id="@+id/share_result"

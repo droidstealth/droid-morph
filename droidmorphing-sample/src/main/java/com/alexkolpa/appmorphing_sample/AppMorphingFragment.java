@@ -1,5 +1,7 @@
 package com.alexkolpa.appmorphing_sample;
 
+import android.animation.Animator;
+import android.animation.ObjectAnimator;
 import android.app.AlertDialog;
 import android.app.ProgressDialog;
 import android.content.Intent;
@@ -13,7 +15,9 @@ import android.text.TextWatcher;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.animation.DecelerateInterpolator;
 import android.widget.ImageView;
+import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -21,9 +25,11 @@ import com.alexkolpa.appmorphing.AppMorph;
 
 import java.io.File;
 
-public class AppMorphingFragment extends Fragment implements AppMorph.MorphProgressListener {
+public class AppMorphingFragment extends Fragment {
 
     private static final int IMAGE_REQUEST_CODE = 1343;
+
+    private static final int STEP_COUNT = AppMorph.ProgressStep.values().length;
 
     AppMorph mAppMorph;
 
@@ -35,10 +41,10 @@ public class AppMorphingFragment extends Fragment implements AppMorph.MorphProgr
 
     private View mShareResult;
 
+    private ProgressBar mProgressBar;
+
     private TextView mLabelView;
     private ImageView mIconView;
-
-    private ProgressFragment mProgressDialog;
 
     private File mMorphedApk;
 
@@ -49,12 +55,8 @@ public class AppMorphingFragment extends Fragment implements AppMorph.MorphProgr
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
         mAppMorph = new AppMorph(getActivity());
-        //we attach ourselves to the morpher to listen to its progress
-        mAppMorph.setMorphProgressListener(this);
 
-        View rootView = inflater.inflate(R.layout.fragment_app_morphing_sample, container, false);
-
-        return rootView;
+        return inflater.inflate(R.layout.fragment_app_morphing_sample, container, false);
     }
 
     @Override
@@ -106,19 +108,14 @@ public class AppMorphingFragment extends Fragment implements AppMorph.MorphProgr
 
         mIconView = (ImageView) rootView.findViewById(R.id.icon);
         mLabelView = (TextView) rootView.findViewById(R.id.label);
+        mProgressBar = (ProgressBar) rootView.findViewById(R.id.progress);
+        mProgressBar.setMax(STEP_COUNT * 100);
     }
 
     private void startMorph() {
-        if(mProgressDialog != null) {
-            mProgressDialog.dismiss();
-        }
-
-        mProgressDialog = new ProgressFragment();
-        mProgressDialog.show(getFragmentManager(), "Progress");
-
-        mShareResult.setVisibility(View.GONE);
-
-        new MorphTask().execute();
+        MorphTask task = new MorphTask();
+        mAppMorph.setMorphProgressListener(task);
+        task.execute();
     }
 
     @Override
@@ -148,33 +145,22 @@ public class AppMorphingFragment extends Fragment implements AppMorph.MorphProgr
         }
     }
 
-    @Override
-    public void onProgress(AppMorph.ProgressStep progress) {
-        if(mProgressDialog != null) {
-            mProgressDialog.setProgress(progress);
-        }
-    }
 
-    @Override
-    public void onMorphFailed(AppMorph.ProgressStep atPoint, Exception failure) {
-        if(mProgressDialog != null) {
-            mProgressDialog.dismiss();
-            Toast.makeText(getActivity(), R.string.failed_app_morph, Toast.LENGTH_SHORT).show();
-        }
-    }
-
-    @Override
-    public void onFinished(final File newApk) {
-        mMorphedApk = newApk;
-        if(mProgressDialog != null) {
-            mProgressDialog.dismiss();
-        }
-    }
 
     /**
      * This task runs the actual morphing, done async as not to block the UI thread.
      */
-    private class MorphTask extends AsyncTask<Void, Void, Void> {
+    private class MorphTask extends AsyncTask<Void, Integer, Void> implements AppMorph.MorphProgressListener {
+
+        @Override
+        protected void onPreExecute() {
+            super.onPreExecute();
+
+            mMorphButton.setEnabled(false);
+            mProgressBar.setProgress(0);
+            mProgressBar.setVisibility(View.VISIBLE);
+            mShareResult.setVisibility(View.GONE);
+        }
 
         @Override
         protected Void doInBackground(Void... voids) {
@@ -187,11 +173,16 @@ public class AppMorphingFragment extends Fragment implements AppMorph.MorphProgr
         protected void onPostExecute(Void aVoid) {
             super.onPostExecute(aVoid);
 
-            if(mMorphedApk == null) {
+            mMorphButton.setEnabled(true);
+            mProgressBar.setVisibility(View.GONE);
+            mShareResult.setVisibility(View.VISIBLE);
+
+            //We failed. We're sorry
+            if(isCancelled() || mMorphedApk == null) {
+                Toast.makeText(getActivity(), R.string.failed_app_morph, Toast.LENGTH_SHORT).show();
                 return;
             }
 
-            mShareResult.setVisibility(View.VISIBLE);
 
             mIconView.setImageURI(mIcon);
             mLabelView.setText(mLabel);
@@ -207,6 +198,41 @@ public class AppMorphingFragment extends Fragment implements AppMorph.MorphProgr
                     startActivity(sendIntent);
                 }
             });
+        }
+
+        @Override
+        protected void onProgressUpdate(Integer... values) {
+            super.onProgressUpdate(values);
+
+            updateSmoothProgress(values[0]);
+        }
+
+        private void updateSmoothProgress(int progress) {
+            if(android.os.Build.VERSION.SDK_INT >= 11){
+                // will update the "progress" propriety of seekbar until it reaches progress
+                ObjectAnimator animation = ObjectAnimator.ofInt(mProgressBar, "progress", progress);
+                animation.setDuration(500); // 0.5 second
+                animation.setInterpolator(new DecelerateInterpolator());
+                animation.start();
+            }
+            else
+                mProgressBar.setProgress(progress);
+        }
+
+        @Override
+        public void onProgress(AppMorph.ProgressStep progress) {
+            publishProgress(progress.id * 100);
+        }
+
+        @Override
+        public void onMorphFailed(AppMorph.ProgressStep atPoint, Exception failure) {
+            cancel(true);
+        }
+
+        @Override
+        public void onFinished(File newApk) {
+            mMorphedApk = newApk;
+            publishProgress(STEP_COUNT * 100);
         }
     }
 }
