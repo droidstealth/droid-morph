@@ -1,1 +1,1 @@
-include ':droidmorphing-sample', ':droidmorphing-lib'
+include ':droidmorphing-lib'
